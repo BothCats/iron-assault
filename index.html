@@ -11032,7 +11032,7 @@
       this.victoryTimer = 0;
       if(!this.timeBonusAwarded){
         this.timeRemaining = Math.max(0, Math.floor(300 - this.runTime));
-        this.timeBonus = this.timeRemaining * 10;
+        this.timeBonus = Math.min(1200, this.timeRemaining * 20);
         this.score += this.timeBonus;
         this.timeBonusAwarded = true;
       }
@@ -12811,7 +12811,7 @@
     g.textAlign = 'center';
     const timeBonusText = game.runTime > 300
       ? 'TIME BONUS +00000   //   OVERTIME · NO PENALTY'
-      : `TIME BONUS +${pad(game.timeBonus || 0, 5)}   //   REMAINING ${game.timeRemaining || 0}s`;
+      : `TIME BONUS +${pad(game.timeBonus || 0, 5)}   //   REMAINING ${game.timeRemaining || 0}s   //   CAP 1200`;
     g.fillText(timeBonusText, W / 2, y + 279);
 
     if(game.newRecord){
