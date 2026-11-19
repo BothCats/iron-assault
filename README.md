@@ -39,8 +39,8 @@
    ```bash
    git clone git@github.com:BothCats/iron-assault.git
    ```
+#### 🌐下载后，直接在浏览器打开 `index.html`。
 
-#### 🌐 在线访问 直接在浏览器打开 `index.html`。
 
 
 #### 🎮 操作
