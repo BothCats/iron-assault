@@ -330,6 +330,7 @@
     };
   }
 
+  const MAX_RUN_HISTORY = 15;
   function rankForScore(score){
     if(score >= 100000) return 'SSS';
     if(score >= 95000) return 'S';
@@ -364,17 +365,18 @@
             deaths: Math.max(0, Math.round(+r.deaths || 0)),
             combo: Math.max(0, Math.round(+r.combo || 0)),
             bosses: Math.max(0, Math.round(+r.bosses || 0)),
+            difficulty: typeof r.difficulty === 'string' ? r.difficulty : '',
             rank: rankForScore(score)
           };
         })
         .sort((a, b) => b.score - a.score || a.time - b.time)
-        .slice(0, 5);
+        .slice(0, MAX_RUN_HISTORY);
     }catch(e){
       return [];
     }
   }
   function saveRunHistory(list){
-    storageSet('ironAssault.history', JSON.stringify(list.slice(0, 5)));
+    storageSet('ironAssault.history', JSON.stringify(list.slice(0, MAX_RUN_HISTORY)));
   }
 
   function roundRect(g, x, y, w, h, r){
@@ -649,6 +651,28 @@
       ],
       leadType: 'square',
       bassType: 'triangle',
+      arpType: 'triangle',
+      pad: true
+    },
+    victoryFrost: {
+      bpm: 138,
+      length: 32,
+      once: true,
+      drums: { kick: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4, 7, 12, 15], hat: [1, 3, 5, 7, 9, 11, 13, 15], openHat: [6, 14] },
+      bass: [
+        38, 38, 45, 50, 43, 43, 50, 55, 40, 40, 47, 52, 45, 45, 52, 57,
+        38, 38, 45, 50, 43, 43, 50, 55, 47, 47, 54, 59, 45, 45, 52, 57
+      ],
+      lead: [
+        86, 89, 93, 98, 96, 93, 89, 86, 88, 91, 95, 100, 98, 95, 91, 88,
+        86, 89, 93, 98, 100, 98, 95, 93, 91, 95, 98, 103, 100, 98, 95, 91
+      ],
+      arp: [
+        98, 93, 98, 105, 101, 98, 101, 106, 100, 95, 100, 107, 103, 100, 103, 108,
+        98, 93, 98, 105, 101, 98, 101, 106, 102, 98, 102, 110, 105, 102, 98, 95
+      ],
+      leadType: 'square',
+      bassType: 'sawtooth',
       arpType: 'triangle',
       pad: true
     }
@@ -1036,6 +1060,7 @@
     Tab: 'swap',
     Enter: 'confirm', NumpadEnter: 'confirm',
     Escape: 'pause', KeyP: 'pause',
+    Backspace: 'back',
     KeyM: 'mute', KeyR: 'restart', KeyQ: 'quit'
   };
   const input = {
@@ -1130,6 +1155,78 @@
     spread: { name: '散射炮', en: 'SCATTER GUN', color: WEAPONS.spread.color, icon: 'S', weapon: true },
     laser: { name: '穿透激光', en: 'LANCE BEAM', color: WEAPONS.laser.color, icon: 'L', weapon: true }
   };
+
+  // New-version scoring / difficulty data.
+  // Stage 1-5 use the small-stage clear screen; stage 6 awards the same base + armor
+  // directly into the final score without opening a small-stage screen.
+  const STAGE_CLEAR_BASE = [1500, 2000, 2500, 2500, 2500, 2500];
+  const STAGE_LABELS = ['丛林前线', '钢铁核心', '熔炉深渊', '天穹要塞', '雪原铁路', '沙海重工'];
+  const FREE_STAGE_IMG = [
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+  ];
+  const FREE_BOSS_IMG = [
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+    'data:image/jpeg;base64,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',
+  ];
+  const FREE_IMAGE_CACHE = new Map();
+  for(const src of FREE_STAGE_IMG.concat(FREE_BOSS_IMG)){
+    const img = new Image();
+    img.src = src;
+    FREE_IMAGE_CACHE.set(src, img);
+  }
+  function freeThumb(src){
+    const img = FREE_IMAGE_CACHE.get(src);
+    return img && img.complete && img.naturalWidth ? img : null;
+  }
+
+  const ARMOR_SCORE_PER_BLOCK = 250;
+  const BOSS_SCORE_BY_STAGE = [0, 4200, 4800, 4000, 7000, 9800];
+  const DIFFICULTIES = [
+    {
+      id: 'light', name: '细雪', en: 'LIGHT SNOW', color: '#8fdfd0',
+      tagline: '容错优先 / 缓慢回盾',
+      playerHp: 5, bonusLives: 1, bossHpMult: .5, bossShieldHpMult: .7,
+      killScoreMult: 1, scoreMult: .8, deathDrop: 'none', keepWeaponsOnDeath: true, shieldRegen: 20,
+      bulletPlus: false, timeLimit: 360, timeRate: 80, timeCap: 9600,
+      hint: '积分与时间奖励会随难度变化，死亡武器不掉落，额外生命与护盾。',
+      rules: ['任何死亡都不掉落枪械', '护盾每 20 秒回复 1 点', 'Boss 生命 -50% / 护盾 -30%', '所有得分 -20%']
+    },
+    {
+      id: 'normal', name: '中雪', en: 'NORMAL SNOW', color: '#ffd37a',
+      tagline: '标准战役 / 默认难度',
+      playerHp: 4, bonusLives: 0, bossHpMult: 1, bossShieldHpMult: 1,
+      killScoreMult: 1, scoreMult: 1, deathDrop: 'all', keepWeaponsOnDeath: false, shieldRegen: 0,
+      bulletPlus: false, timeLimit: 360, timeRate: 80, timeCap: 9600,
+      hint: '积分与时间奖励会随难度变化。',
+      rules: ['标准规则，不改变数值', 'Boss 生命与护盾保持原样', '击杀与得分倍率 ×1.00', '时间奖励：360 秒 / 80 分每秒']
+    },
+    {
+      id: 'blizzard', name: '暴雪', en: 'BLIZZARD', color: '#ff9b5d',
+      tagline: '高压推进 / 击杀加成',
+      playerHp: 2, bonusLives: 0, bossHpMult: 1.3, bossShieldHpMult: 1,
+      killScoreMult: 1.1, scoreMult: 1, deathDrop: 'highest', keepWeaponsOnDeath: false, shieldRegen: 0,
+      bulletPlus: false, timeLimit: 420, timeRate: 100, timeCap: 12000,
+      hint: '积分与时间奖励会随难度变化，死亡惩罚，护盾减少。',
+      rules: ['Boss 生命 +30%', '最大护盾 2 格', '击杀得分 +10%', '死亡只掉落最高级武器', '时间奖励：420 秒 / 100 分每秒']
+    },
+    {
+      id: 'frost', name: '霜冻', en: 'DEEP FREEZE', color: '#8fe8ff',
+      tagline: '极限挑战 / 一触即碎',
+      playerHp: 1, bonusLives: 0, bossHpMult: 1.3, bossShieldHpMult: 1,
+      killScoreMult: 1.25, scoreMult: 1, deathDrop: 'none', keepWeaponsOnDeath: false, shieldRegen: 0,
+      bulletPlus: true, timeLimit: 420, timeRate: 100, timeCap: 18000,
+      hint: '积分与时间奖励会随难度变化，死亡失去所有武器，极限护盾。',
+      rules: ['最大护盾 1 格，触之即死', '除第六关 Boss 外，敌人每次攻击发射两次', 'Boss 生命 +30% / 击杀得分 +25%', '死亡时非基础武器全部消失', '时间奖励：420 秒 / 100 分每秒']
+    }
+  ];
 
   /* =========================================================
      LEVEL DATA
@@ -4610,6 +4707,15 @@
     }
   }
 
+  // Frost uses a second firing action, not two bullets in one shot.
+  // This remains a normal bullet collection; the second action is queued by Game.
+  class EnemyBulletList extends Array {
+    constructor(game){
+      super();
+      this.game = game;
+    }
+  }
+
   /* =========================================================
      ENEMIES
      ========================================================= */
@@ -4709,6 +4815,7 @@
     }
 
     fire(game){
+      this._frostDidFire = true;
       if(this.type === 'grenadier'){
         this.throwGrenade(game);
         return;
@@ -9986,7 +10093,9 @@
         w.t += dt;
         w.life -= dt;
         w.x += w.dir * 540 * dt;
-        if(!w.hit && p && !p.dead && p.onGround && Math.abs(p.x - w.x) < 33){
+        // Ground-level shockwave: platform standers are safe.
+        if(!w.hit && p && !p.dead && p.onGround && !p.onPlatform &&
+          p.y >= GROUND_Y - 14 && Math.abs(p.x - w.x) < 33){
           w.hit = true;
           game.damagePlayer(1, w.x);
         }
@@ -10441,6 +10550,34 @@
       this.timeBonus = 0;
       this.timeRemaining = 0;
       this.timeBonusAwarded = false;
+      this.difficultyIndex = 1;
+      this.difficulty = DIFFICULTIES[1];
+      this.frostUnlocked = storageGet('ironAssault.frostUnlocked', '0') === '1';
+      this.frostCleared = storageGet('ironAssault.frostCleared', '0') === '1';
+      this.frostJustUnlocked = false;
+      this.victoryShowLeaderboard = false;
+      this.difficultyEnter = 0;
+      this.difficultyExit = 0;
+      this.difficultyExiting = false;
+      this.fastFade = false;
+      this.selectionMode = 'difficulty';
+      this.freeCursorRow = 0;
+      this.freeCursorCol = 0;
+      this.pendingSelection = null;
+      this.freeBossRun = false;
+      this.freeStageRun = false;
+      this.freeStartStage = 0;
+      this.frostCouponEligible = false;
+      this.bossResult = null;
+      this.bossResultTimer = 0;
+      this.stageClearBase = 0;
+      this.stageClearArmor = 0;
+      this.finalStageBase = 0;
+      this.finalStageArmor = 0;
+      this.finalStageScored = false;
+      this.shieldRegenTimer = 20;
+      this.shieldRegenPulse = 0;
+      this.frostEchoes = [];
       this.stage = buildStage(0);
       this.camera = { x: 0 };
       this.cameraMax = Math.max(0, this.stage.width - W);
@@ -10450,7 +10587,7 @@
       this.props = [];
       this.pickups = [];
       this.playerBullets = [];
-      this.enemyBullets = [];
+      this.enemyBullets = new EnemyBulletList(this);
       this.particles = new ParticleSystem();
       this.markers = [];
       this.hazards = [];
@@ -10465,6 +10602,8 @@
       this.stageIntro = 0;
       this.stageClearTimer = 0;
       this.stageClearBonus = 0;
+      this.stageClearBase = 0;
+      this.stageClearArmor = 0;
       this.toast = null;
       this.shake = 0;
       this.flash = 0;
@@ -10476,6 +10615,7 @@
       this.pendingGameOver = false;
       this.lastDroppedWeapons = 0;
       this.lastDropFell = false;
+      this.lastWeaponsLostAll = false;
       this.checkpointIndex = 0;
       this.checkpoint = { x: 0, y: GROUND_Y };
       this.titleHero = null;
@@ -10499,7 +10639,8 @@
       this.props = [];
       this.pickups = [];
       this.playerBullets = [];
-      this.enemyBullets = [];
+      this.enemyBullets = new EnemyBulletList(this);
+      this.frostEchoes = [];
       this.markers = [];
       this.hazards = [];
       this.lavaChase = null;
@@ -10524,9 +10665,17 @@
       });
     }
 
-    startNewRun(){
+    startNewRun(enterFast = false, options = {}){
       sound.unlock();
       sound.setPaused(false);
+      this.fastFade = !!enterFast;
+      this.freeBossRun = !!options.bossStage;
+      this.freeStageRun = !!options.freeStage;
+      this.freeStartStage = options.bossStage != null ? options.bossStage : (options.startStage || 0);
+      this.frostCouponEligible = false;
+      this.bossResult = null;
+      this.bossResultTimer = 0;
+      this.pendingSelection = null;
       this.score = 0;
       this.lives = 3;
       this.deaths = 0;
@@ -10542,13 +10691,53 @@
       this.timeBonus = 0;
       this.timeRemaining = 0;
       this.timeBonusAwarded = false;
+      this.difficulty = DIFFICULTIES[this.difficultyIndex] || DIFFICULTIES[1];
+      if(this.difficulty.id === 'frost' && !this.frostUnlocked){
+        this.difficultyIndex = 1;
+        this.difficulty = DIFFICULTIES[1];
+      }
+      this.lives = 3 + (this.difficulty.bonusLives || 0);
+      this.stageClearBase = 0;
+      this.stageClearArmor = 0;
+      this.finalStageBase = 0;
+      this.finalStageArmor = 0;
+      this.finalStageScored = false;
+      this.shieldRegenTimer = this.difficulty.shieldRegen || 0;
+      this.shieldRegenPulse = 0;
+      this.frostEchoes = [];
+      this.frostJustUnlocked = false;
+      this.victoryShowLeaderboard = false;
       this.runHistory = loadRunHistory();
       this.pendingGameOver = false;
       this.lastDroppedWeapons = 0;
       this.lastDropFell = false;
-      this.loadStage(0, false);
+      this.lastWeaponsLostAll = false;
+      this.loadStage(this.freeStartStage, false);
+      if((this.freeStageRun || this.freeBossRun) && this.freeStartStage > 0){
+        // Free-select entry beyond stage 1 starts with all three special guns at tier 1.
+        for(const id of ['machine', 'spread', 'laser']){
+          if(!this.player.arsenal.includes(id)) this.player.arsenal.push(id);
+          this.player.weaponTiers[id] = 1;
+        }
+      }
+      if(this.freeBossRun){
+        this.runRecorded = true;
+        this.prepareBossRush();
+      }
       this.state = 'playing';
       sound.sfx('ui');
+    }
+
+    prepareBossRush(){
+      if(!this.stage.boss || !this.boss) return;
+      this.stageIntro = 0;
+      this.player.invuln = 1.4;
+      this.player.x = clamp(this.stage.arenaLeft + 70, 24, this.stage.width - 24);
+      this.camera.x = this.cameraMax;
+      this.activateBoss();
+      this.bossWarning = 1.2;
+      this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
     }
 
     loadStage(index, preserveWeapon = false){
@@ -10567,10 +10756,23 @@
       this.props = this.stage.props.map(p => new Breakable(p));
       this.pickups = this.stage.pickups.map(p => new Pickup(p.x, p.y, p.type));
       this.playerBullets = [];
-      this.enemyBullets = [];
+      this.enemyBullets = new EnemyBulletList(this);
+      this.frostEchoes = [];
       this.markers = [];
       this.particles = new ParticleSystem();
       this.boss = this.stage.boss ? createBoss(this.stage.boss) : null;
+      if(this.boss){
+        const hpMult = this.difficulty.bossHpMult || 1;
+        this.boss.maxHp = Math.max(1, Math.round(this.boss.maxHp * hpMult));
+        this.boss.hp = this.boss.maxHp;
+        if(this.boss.nodes){
+          const nodeMult = this.difficulty.bossShieldHpMult || 1;
+          for(const node of this.boss.nodes){
+            node.maxHp = Math.max(1, Math.round(node.maxHp * nodeMult));
+            node.hp = node.maxHp;
+          }
+        }
+      }
       this.hazards = (this.stage.hazards || []).map(h => new FieldHazard(h));
       this.lavaChase = this.stage.chase
         ? { ...this.stage.chase, active: false, done: false, x: 0, rumble: 0 }
@@ -10584,9 +10786,12 @@
       this.pendingGameOver = false;
       this.lastDroppedWeapons = 0;
       this.lastDropFell = false;
+      this.lastWeaponsLostAll = false;
       this.checkpointIndex = 0;
       this.checkpoint = this.stage.checkpoints[0];
       this.player = new Player(this.stage.spawn.x, this.stage.spawn.y);
+      this.player.maxHp = this.difficulty.playerHp || 4;
+      this.player.hp = this.player.maxHp;
       if(keptLoadout){
         this.player.arsenal = keptLoadout.arsenal;
         this.player.weaponTiers = keptLoadout.weaponTiers;
@@ -10598,6 +10803,8 @@
       this.stageIntro = 2.8;
       this.stageClearTimer = 0;
       this.stageClearBonus = 0;
+      this.stageClearBase = 0;
+      this.stageClearArmor = 0;
       this.combo = 0;
       this.comboTimer = 0;
       this.comboFlash = 0;
@@ -10633,8 +10840,12 @@
       return rankForScore(this.score);
     }
 
+    getAvailableDifficulties(){
+      return this.frostUnlocked ? DIFFICULTIES : DIFFICULTIES.filter(d => d.id !== 'frost');
+    }
+
     recordRun(){
-      if(this.runRecorded) return;
+      if(this.runRecorded || this.freeBossRun) return;
       this.runRecorded = true;
       if(this.score <= 0) return;
       this.runHistory.push({
@@ -10643,14 +10854,19 @@
         deaths: this.deaths,
         combo: this.comboBest,
         bosses: this.bossKills,
+        difficulty: this.difficulty ? this.difficulty.id : '',
         rank: this.getRunRating()
       });
       this.runHistory.sort((a, b) => b.score - a.score || a.time - b.time);
-      this.runHistory = this.runHistory.slice(0, 5);
+      this.runHistory = this.runHistory.slice(0, MAX_RUN_HISTORY);
       saveRunHistory(this.runHistory);
     }
 
     finalizeBest(){
+      if(this.freeBossRun){
+        this.newRecord = false;
+        return;
+      }
       if(this.score > this.best){
         this.best = this.score;
         this.newRecord = true;
@@ -10684,7 +10900,10 @@
     }
 
     addScore(n){
-      this.score += Math.max(0, Math.round(n));
+      const mult = this.difficulty ? this.difficulty.scoreMult : 1;
+      const gained = Math.max(0, Math.round(n * mult));
+      this.score += gained;
+      return gained;
     }
 
     get comboMultiplier(){
@@ -10698,8 +10917,8 @@
       this.comboFlash = .22;
       this.comboBest = Math.max(this.comboBest, this.combo);
       this.kills++;
-      const gained = Math.round(base * this.comboMultiplier);
-      this.addScore(gained);
+      const killMult = this.difficulty ? this.difficulty.killScoreMult : 1;
+      const gained = this.addScore(base * this.comboMultiplier * killMult);
       return gained;
     }
 
@@ -10719,6 +10938,11 @@
 
       if(this.state === 'title'){
         this.updateTitle(dt);
+        return;
+      }
+
+      if(this.state === 'difficulty'){
+        this.updateDifficulty(dt);
         return;
       }
 
@@ -10757,14 +10981,36 @@
         return;
       }
 
+      if(this.state === 'bossresult'){
+        this.bossResultTimer += dt;
+        this.worldTime += dt;
+        this.updateTimers(dt);
+        this.particles.update(dt);
+        if(this.bossResultTimer > .55 &&
+          (input.wasPressed('confirm') || input.wasPressed('jump') ||
+           input.wasPressed('pause') || input.wasPressed('quit') || input.pointerPressed)){
+          this.returnToDifficultySelect();
+        }
+        return;
+      }
+
       if(this.state === 'gameover'){
         this.gameOverTimer += dt;
         this.worldTime += dt;
         this.updateTimers(dt);
         this.particles.update(dt);
+        if(input.wasPressed('swap')) this.victoryShowLeaderboard = !this.victoryShowLeaderboard;
+        if(this.victoryShowLeaderboard){
+          if(input.wasPressed('pause') || input.wasPressed('confirm')) this.victoryShowLeaderboard = false;
+          return;
+        }
         if(this.gameOverTimer > .9){
           if(input.wasPressed('confirm') || input.wasPressed('jump') || input.pointerPressed){
-            this.startNewRun();
+            if(this.freeStageRun || this.freeBossRun){
+              this.returnToDifficultySelect();
+            }else{
+              this.startNewRun();
+            }
           }else if(input.wasPressed('pause') || input.wasPressed('quit')){
             this.goTitle();
           }
@@ -10777,9 +11023,14 @@
         this.worldTime += dt;
         this.updateTimers(dt);
         this.particles.update(dt);
+        if(input.wasPressed('swap')) this.victoryShowLeaderboard = !this.victoryShowLeaderboard;
+        if(this.victoryShowLeaderboard){
+          if(input.wasPressed('pause') || input.wasPressed('confirm')) this.victoryShowLeaderboard = false;
+          return;
+        }
         if(this.victoryTimer > 1.0){
           if(input.wasPressed('confirm') || input.wasPressed('jump') || input.pointerPressed){
-            this.startNewRun();
+            this.goTitle();
           }else if(input.wasPressed('pause') || input.wasPressed('quit')){
             this.goTitle();
           }
@@ -10793,7 +11044,115 @@
         this.titleHero.aimAngle = -2.95 + Math.sin(this.time * .55) * .025;
       }
       if(input.wasPressed('confirm') || input.wasPressed('jump') || input.pointerPressed){
-        this.startNewRun();
+        this.state = 'difficulty';
+        this.difficultyEnter = 0;
+        this.difficultyExit = 0;
+        this.difficultyExiting = false;
+        this.selectionMode = 'difficulty';
+        this.freeCursorRow = 0;
+        this.freeCursorCol = 0;
+        this.pendingSelection = null;
+        if(!this.frostUnlocked && this.difficulty && this.difficulty.id === 'frost'){
+          this.difficultyIndex = 1;
+        }
+        this.difficulty = DIFFICULTIES[this.difficultyIndex] || DIFFICULTIES[1];
+        sound.sfx('ui');
+      }
+    }
+
+    updateDifficulty(dt){
+      if(this.titleHero){
+        this.titleHero.animTime += dt;
+        this.titleHero.aimAngle = -2.95 + Math.sin(this.time * .55) * .025;
+      }
+      if(this.difficultyExiting){
+        this.difficultyExit = Math.min(1, this.difficultyExit + dt / .18);
+        if(this.difficultyExit >= 1){
+          const sel = this.pendingSelection;
+          this.pendingSelection = null;
+          if(sel && sel.type === 'stage'){
+            this.startNewRun(true, { startStage: sel.stage, freeStage: true });
+          }else if(sel && sel.type === 'boss'){
+            this.startNewRun(true, { bossStage: sel.stage });
+          }else{
+            this.startNewRun(true);
+          }
+        }
+        return;
+      }
+      this.difficultyEnter = Math.min(1, this.difficultyEnter + dt / .28);
+
+      if(input.wasPressed('back')){
+        this.setupTitle();
+        sound.sfx('ui');
+        return;
+      }
+
+      const available = this.getAvailableDifficulties();
+      let selected = available.findIndex(d => d.id === (this.difficulty ? this.difficulty.id : 'normal'));
+      if(selected < 0) selected = Math.min(1, available.length - 1);
+
+      if(this.frostUnlocked && this.selectionMode === 'grid'){
+        if(input.wasPressed('up')){
+          if(this.freeCursorRow === 0){
+            this.selectionMode = 'difficulty';
+            sound.sfx('ui');
+            return;
+          }
+          this.freeCursorRow--;
+          sound.sfx('ui');
+        }else if(input.wasPressed('down')){
+          this.freeCursorRow = Math.min(5, this.freeCursorRow + 1);
+          sound.sfx('ui');
+        }
+        if(this.freeCursorRow === 0) this.freeCursorCol = 0;
+        if(this.freeCursorRow > 0){
+          if(input.wasPressed('left')) this.freeCursorCol = 0;
+          if(input.wasPressed('right')) this.freeCursorCol = 1;
+        }
+        if(input.wasPressed('pause') || input.wasPressed('quit')){
+          this.setupTitle();
+          sound.sfx('ui');
+          return;
+        }
+        if(input.wasPressed('confirm') || input.wasPressed('fire') || input.wasPressed('jump')){
+          this.pendingSelection = {
+            type: this.freeCursorCol === 0 ? 'stage' : 'boss',
+            stage: this.freeCursorRow
+          };
+          this.difficultyExiting = true;
+          this.difficultyExit = 0;
+          sound.sfx('ui');
+        }
+        return;
+      }
+
+      let dir = 0;
+      if(input.wasPressed('left')) dir = -1;
+      else if(input.wasPressed('right')) dir = 1;
+      if(dir !== 0){
+        selected = (selected + dir + available.length) % available.length;
+        this.difficulty = available[selected];
+        this.difficultyIndex = DIFFICULTIES.indexOf(this.difficulty);
+        sound.sfx('ui');
+      }
+      if(input.wasPressed('pause') || input.wasPressed('quit')){
+        this.setupTitle();
+        sound.sfx('ui');
+        return;
+      }
+      if(this.frostUnlocked && input.wasPressed('down')){
+        this.selectionMode = 'grid';
+        this.freeCursorRow = 0;
+        this.freeCursorCol = 0;
+        sound.sfx('ui');
+        return;
+      }
+      if(input.wasPressed('confirm') || input.wasPressed('fire') || input.wasPressed('jump')){
+        this.pendingSelection = null;
+        this.difficultyExiting = true;
+        this.difficultyExit = 0;
+        sound.sfx('ui');
       }
     }
 
@@ -10812,7 +11171,8 @@
           this.combo = 0;
         }
       }
-      this.fade = Math.max(0, this.fade - dt * 1.7);
+      this.fade = Math.max(0, this.fade - dt * (this.fastFade ? 3.6 : 1.7));
+      if(this.fade <= 0) this.fastFade = false;
       if(this.toast){
         this.toast.t += dt;
         if(this.toast.t > this.toast.dur + .35) this.toast = null;
@@ -10867,6 +11227,24 @@
       this.updateTimers(dt);
       if(this.stageIntro > 0) this.stageIntro = Math.max(0, this.stageIntro - dt);
 
+      if(this.difficulty && this.difficulty.shieldRegen && this.player && !this.player.dead){
+        this.shieldRegenTimer -= dt;
+        if(this.shieldRegenTimer <= 0){
+          const p = this.player;
+          if(p.hp < p.maxHp){
+            p.hp = Math.min(p.maxHp, p.hp + 1);
+            this.shieldRegenPulse = .65;
+            this.particles.add({
+              type: 'ring', x: p.x, y: p.centerY, r: 14,
+              color: '#7ce7c5', life: .5, maxLife: .5, gravity: 0
+            });
+            this.showToast('护盾恢复 +1', 'SHIELD RECHARGE', 1.4, '#7ce7c5');
+            sound.sfx('checkpoint');
+          }
+          this.shieldRegenTimer = this.difficulty.shieldRegen;
+        }
+      }
+
       const controllable = this.stageIntro <= 1.55 && !this.player.dead;
       this.player.update(dt, this, controllable);
 
@@ -10881,15 +11259,59 @@
 
       if(this.stageIntro <= 1.55 && !this.bossActive && this.bossDefeatTimer <= 0) this.spawnNearby();
 
+      const frostDouble = !!(this.difficulty && this.difficulty.bulletPlus);
       for(const e of this.enemies){
-        if(this.stageIntro <= 1.55) e.update(dt, this);
+        if(this.stageIntro <= 1.55){
+          e._frostDidFire = false;
+          e.update(dt, this);
+          if(frostDouble && !e.dead){
+            if(e._frostDidFire && !e._frostSecondQueued){
+              e._frostSecondQueued = true;
+              e._frostSecondTimer = .1;
+            }
+            if(e._frostSecondQueued){
+              e._frostSecondTimer -= dt;
+              if(e._frostSecondTimer <= 0){
+                e._frostSecondQueued = false;
+                e._frostDidFire = false;
+                e.fire(this);
+              }
+            }
+          }
+        }
       }
       for(const p of this.props) p.update(dt, this);
       for(const p of this.pickups) p.update(dt, this);
       for(const h of this.hazards) h.update(dt, this);
       this.updateLavaChase(dt);
 
+      // Bosses fire a real second volley 0.12 seconds later.
+      // The sixth-stage boss is explicitly exempt.
+      const bossBulletStart = this.enemyBullets.length;
       if(this.boss) this.boss.update(dt, this);
+      if(frostDouble && this.stageIndex < 5 && this.enemyBullets.length > bossBulletStart){
+        const echoBullets = [];
+        for(let i = bossBulletStart; i < this.enemyBullets.length; i++){
+          const src = this.enemyBullets[i];
+          if(!src || src._frostEcho) continue;
+          const b = Object.assign(Object.create(Object.getPrototypeOf(src)), src);
+          const sp = Math.hypot(b.vx, b.vy) || 1;
+          const ang = Math.atan2(b.vy, b.vx) + rand(-.07, .07);
+          b.vx = Math.cos(ang) * sp;
+          b.vy = Math.sin(ang) * sp;
+          b._frostEcho = true;
+          b.trailTimer = 0;
+          echoBullets.push(b);
+        }
+        if(echoBullets.length) this.frostEchoes.push({ t: .12, bullets: echoBullets });
+      }
+      for(const echo of this.frostEchoes){
+        echo.t -= dt;
+        if(echo.t <= 0){
+          for(const b of echo.bullets) this.enemyBullets.push(b);
+        }
+      }
+      this.frostEchoes = this.frostEchoes.filter(e => e.t > 0);
 
       this.updatePlayerBullets(dt);
       this.updateEnemyBullets(dt);
@@ -10921,7 +11343,12 @@
       this.props = this.props.filter(p => !p.dead);
       this.pickups = this.pickups.filter(p => !p.dead);
       this.playerBullets = this.playerBullets.filter(b => !b.dead);
-      this.enemyBullets = this.enemyBullets.filter(b => !b.dead);
+      let keep = 0;
+      for(let i = 0; i < this.enemyBullets.length; i++){
+        const b = this.enemyBullets[i];
+        if(!b.dead) this.enemyBullets[keep++] = b;
+      }
+      this.enemyBullets.length = keep;
       this.markers = this.markers.filter(m => !m.done && m.t < m.dur + .2);
     }
 
@@ -10962,6 +11389,7 @@
       this.bossWarning = 2.6;
       this.player.x = Math.max(this.player.x, this.stage.arenaLeft + 20);
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
       for(const e of this.enemies){
         if(!e.dead){
@@ -11005,12 +11433,14 @@
       if(this.state !== 'playing') return;
       this.state = 'stageclear';
       this.stageClearTimer = 0;
-      this.stageClearBonus = 1500 + this.player.hp * 250;
-      this.addScore(this.stageClearBonus);
+      this.stageClearBase = this.addScore(STAGE_CLEAR_BASE[this.stageIndex] || 0);
+      this.stageClearArmor = this.addScore(this.player.hp * ARMOR_SCORE_PER_BLOCK);
+      this.stageClearBonus = this.stageClearBase + this.stageClearArmor;
       this.player.vx = 0;
       this.player.vy = 0;
       this.player.invuln = 999;
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
       this.toast = null;
       sound.setTrack('none');
@@ -11021,6 +11451,7 @@
       if(this.state === 'gameover') return;
       this.state = 'gameover';
       this.gameOverTimer = 0;
+      this.victoryShowLeaderboard = false;
       this.finalizeBest();
       sound.setTrack('none');
       sound.sfx('gameOver');
@@ -11030,26 +11461,48 @@
       if(this.state === 'victory') return;
       this.state = 'victory';
       this.victoryTimer = 0;
+      // Final stage: award base + armor directly, without opening a small-stage screen.
+      if(!this.finalStageScored){
+        this.finalStageBase = this.addScore(STAGE_CLEAR_BASE[5] || 0);
+        this.finalStageArmor = this.addScore((this.player ? this.player.hp : 0) * ARMOR_SCORE_PER_BLOCK);
+        this.finalStageScored = true;
+      }
       if(!this.timeBonusAwarded){
-        this.timeRemaining = Math.max(0, Math.floor(300 - this.runTime));
-        this.timeBonus = Math.min(1200, this.timeRemaining * 20);
-        this.score += this.timeBonus;
+        const d = this.difficulty || DIFFICULTIES[1];
+        this.timeRemaining = Math.max(0, Math.floor(d.timeLimit - this.runTime));
+        this.timeBonus = this.addScore(Math.min(d.timeCap, this.timeRemaining * d.timeRate));
         this.timeBonusAwarded = true;
       }
+      const diff = this.difficulty || DIFFICULTIES[1];
+      if(diff.id === 'blizzard' && !this.frostUnlocked){
+        this.frostUnlocked = true;
+        this.frostJustUnlocked = true;
+        storageSet('ironAssault.frostUnlocked', '1');
+      }
+      if(diff.id === 'frost'){
+        this.frostCleared = true;
+        storageSet('ironAssault.frostCleared', '1');
+      }
+      // Frost coupon: normal start / free-select stage 1 only.
+      // No rating requirement.
+      this.frostCouponEligible = diff.id === 'frost' && this.freeStartStage === 0;
       this.finalizeBest();
-      sound.setTrack('victory');
+      this.victoryShowLeaderboard = false;
+      sound.setTrack((diff.id === 'frost' || (diff.id === 'blizzard' && this.frostJustUnlocked)) ? 'victoryFrost' : 'victory');
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
     }
 
     onBossDefeated(boss){
       this.bossKills++;
-      this.addScore(8000);
+      this.addScore(BOSS_SCORE_BY_STAGE[this.stageIndex] || 0);
       this.bossDefeatTimer = .0001;
       this.bossExplosionTimer = 0;
       this.flash = .8;
       this.shake = 22;
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
       this.player.invuln = 999;
       for(const e of this.enemies){
@@ -11077,13 +11530,52 @@
         sound.sfx('explosion');
       }
       if(this.bossDefeatTimer > 3.0){
-        if(this.stageIndex >= 5){
+        if(this.freeBossRun){
+          this.finishFreeBossRun();
+        }else if(this.stageIndex >= 5){
           this.winGame();
         }else{
           this.bossDefeatTimer = 0;
           this.beginStageClear();
         }
       }
+    }
+
+    finishFreeBossRun(){
+      if(this.state !== 'playing') return;
+      this.state = 'bossresult';
+      this.bossResultTimer = 0;
+      this.victoryShowLeaderboard = false;
+      this.bossResult = {
+        name: this.boss ? this.boss.name : 'BOSS',
+        en: this.boss ? this.boss.en : 'TARGET DESTROYED',
+        stage: this.stageIndex,
+        score: this.score,
+        time: this.runTime,
+        difficulty: this.difficulty ? this.difficulty.name : '中雪',
+        kills: this.kills + this.bossKills
+      };
+      this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
+      this.markers.length = 0;
+      sound.setTrack('victory');
+    }
+
+    returnToDifficultySelect(){
+      this.freeBossRun = false;
+      this.freeStageRun = false;
+      this.bossResult = null;
+      this.bossResultTimer = 0;
+      this.setupTitle();
+      this.state = 'difficulty';
+      this.difficultyEnter = 1;
+      this.difficultyExit = 0;
+      this.difficultyExiting = false;
+      this.selectionMode = 'difficulty';
+      this.freeCursorRow = 0;
+      this.freeCursorCol = 0;
+      this.pendingSelection = null;
+      sound.sfx('ui');
     }
 
     damagePlayer(amount = 1, sourceX = null){
@@ -11112,8 +11604,17 @@
     dropWeaponsOnDeath(fromFall = false){
       const p = this.player;
       if(!p) return 0;
-      const lost = p.arsenal.filter(w => w !== 'rifle');
+      const mode = this.difficulty ? this.difficulty.deathDrop : 'all';
+      if(mode === 'none') return 0;
+      let lost = p.arsenal.filter(w => w !== 'rifle');
       if(!lost.length) return 0;
+      if(mode === 'highest'){
+        // Blizzard: only the highest-tier special weapon can drop.
+        // Ties are resolved randomly; all other special weapons are lost.
+        const topTier = Math.max(...lost.map(w => p.weaponTiers[w] || 0));
+        const candidates = lost.filter(w => (p.weaponTiers[w] || 0) === topTier);
+        lost = [pick(candidates)];
+      }
       if(fromFall){
         // Falling out of the level loses the weapons permanently.
         // Keep a short non-collectible falling visual, but never spawn a pickup.
@@ -11164,7 +11665,10 @@
       const p = this.player;
       if(!p || p.dead) return;
       this.lastDropFell = cause === 'fall';
-      this.lastDroppedWeapons = this.dropWeaponsOnDeath(this.lastDropFell);
+      const deathMode = this.difficulty ? this.difficulty.deathDrop : 'all';
+      const hadSpecial = p.arsenal.some(w => w !== 'rifle');
+      this.lastWeaponsLostAll = deathMode === 'none' && !this.difficulty.keepWeaponsOnDeath && hadSpecial;
+      this.lastDroppedWeapons = deathMode === 'none' ? 0 : this.dropWeaponsOnDeath(this.lastDropFell);
       p.dead = true;
       p.deathTimer = 1.45;
       p.deathCause = cause;
@@ -11174,6 +11678,7 @@
       this.deaths++;
       this.pendingGameOver = this.lives <= 0;
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
       if(this.boss){
         this.boss.action = null;
@@ -11192,9 +11697,22 @@
     respawnPlayer(){
       const p = this.player;
       const cp = this.checkpoint || this.stage.spawn;
+      const keepLoadout = this.difficulty && this.difficulty.keepWeaponsOnDeath
+        ? { weapon: p.weapon, arsenal: p.arsenal.slice(), weaponTiers: { ...p.weaponTiers } }
+        : null;
       p.resetAt(cp.x, cp.y);
+      if(keepLoadout){
+        p.weapon = keepLoadout.weapon;
+        p.arsenal = keepLoadout.arsenal;
+        p.weaponTiers = keepLoadout.weaponTiers;
+      }
+      p.maxHp = this.difficulty.playerHp || 4;
+      p.hp = p.maxHp;
+      this.shieldRegenTimer = this.difficulty.shieldRegen || 0;
+      this.shieldRegenPulse = 0;
       p.invuln = 2.8;
       this.enemyBullets.length = 0;
+      this.frostEchoes.length = 0;
       this.markers.length = 0;
       if(this.lavaChase){
         this.lavaChase.active = false;
@@ -11221,16 +11739,23 @@
       this.pendingGameOver = false;
       const lost = this.lastDroppedWeapons;
       const fell = this.lastDropFell;
+      const lostAll = this.lastWeaponsLostAll;
+      const keep = this.difficulty && this.difficulty.keepWeaponsOnDeath;
       this.lastDroppedWeapons = 0;
       this.lastDropFell = false;
-      const lostText = fell
-        ? `武器坠入深渊 ${lost} 件  ·  无法回收`
-        : `武器已掉落 ${lost} 件  ·  返回拾取`;
+      this.lastWeaponsLostAll = false;
+      const lostText = keep
+        ? '武器保留  ·  护盾已重置'
+        : (lostAll
+          ? '武器全部遗失  ·  无法回收'
+          : (fell
+            ? `武器坠入深渊 ${lost} 件  ·  无法回收`
+            : `武器已掉落 ${lost} 件  ·  返回拾取`));
       this.showToast(
         '重新部署',
-        lost > 0 ? lostText : 'REDEPLOYING // ARMOR RESTORED',
+        keep || lostAll || lost > 0 ? lostText : 'REDEPLOYING // ARMOR RESTORED',
         2.8,
-        lost > 0 ? (fell ? '#ff8a66' : '#ffd27a') : '#63e6c3'
+        keep ? '#63e6c3' : (lostAll ? '#ff8a66' : (lost > 0 ? (fell ? '#ff8a66' : '#ffd27a') : '#63e6c3'))
       );
       sound.sfx('checkpoint');
     }
@@ -11461,8 +11986,8 @@
             if(leveled && newTier > 0){
               this.showToast(`${info.name}  强化 +${newTier}`, `${weaponTierEffect(w, newTier)}  ·  1-4 切换`, 2.8, info.color);
             }else if(p.weaponTiers[w] >= 3){
-              this.addScore(200);
-              this.showToast(`${info.name} 已满级`, '+200  ·  重复补给已回收', 2.1, info.color);
+              this.addScore(100);
+              this.showToast(`${info.name} 已满级`, '+100  ·  重复补给已回收', 2.1, info.color);
             }else{
               const passive = w === 'laser' ? '  ·  对护盾满伤 / 对无盾 -10%' : '';
               this.showToast(`获得 ${info.name}`, info.en + ' ONLINE' + passive + '  ·  1-4 切换', 2.4, info.color);
@@ -12086,7 +12611,7 @@
     g.fillRect(146, 26, 1, 46);
     drawSpacedText(g, '装甲 // ARMOR', 162, 32, 1.1, `700 7px ${FONT_MONO}`, 'rgba(222,211,192,.42)', 'left');
     const armorPulse = p.hp <= 1 ? .6 + Math.sin(game.time * 7) * .3 : 1;
-    for(let i = 0; i < 4; i++){
+    for(let i = 0; i < p.maxHp; i++){
       const cx = 162 + i * 28;
       const active = i < p.hp;
       g.save();
@@ -12109,6 +12634,18 @@
       g.lineWidth = .7;
       g.stroke();
       g.restore();
+    }
+    if(game.difficulty && game.difficulty.shieldRegen){
+      const period = game.difficulty.shieldRegen;
+      const ready = p.hp >= p.maxHp;
+      const progress = ready ? 1 : 1 - clamp(game.shieldRegenTimer / period, 0, 1);
+      g.fillStyle = 'rgba(8,18,17,.9)';
+      g.fillRect(162, 56, 112, 2);
+      g.fillStyle = ready ? 'rgba(124,231,197,.5)' : 'rgba(124,231,197,.78)';
+      g.fillRect(162, 56, 112 * progress, 2);
+      g.font = `500 6px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(124,231,197,.64)';
+      g.fillText(ready ? 'SHIELD MAX' : `SHIELD REGEN ${Math.ceil(game.shieldRegenTimer)}s`, 162, 65);
     }
     if(p.hp <= 1){
       g.fillStyle = `rgba(255,120,76,${.5 + Math.sin(game.time * 6) * .25})`;
@@ -12459,6 +12996,28 @@
 
     const x = 258, y = 106, w = 444, h = 338;
     drawHudFrame(g, x, y, w, h, 13, .88, 'rgba(255,132,74,.8)');
+    // Current difficulty badge, kept visible while paused.
+    const runDiff = game.difficulty || DIFFICULTIES[1];
+    const dbw = 112, dbh = 32, dbx = x + w - dbw - 22, dby = y + 14;
+    g.save();
+    g.fillStyle = 'rgba(6,14,14,.82)';
+    roundRect(g, dbx, dby, dbw, dbh, 4);
+    g.fill();
+    g.strokeStyle = runDiff.color;
+    g.globalAlpha = .34;
+    g.lineWidth = 1;
+    g.stroke();
+    g.globalAlpha = 1;
+    g.fillStyle = runDiff.color;
+    g.fillRect(dbx + 1, dby + 7, 2, dbh - 14);
+    g.textAlign = 'left';
+    g.font = `700 5.8px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(216,205,186,.48)';
+    g.fillText('CURRENT DIFFICULTY', dbx + 10, dby + 11);
+    g.font = `700 11px ${FONT_CN}`;
+    g.fillStyle = runDiff.color;
+    g.fillText(runDiff.name, dbx + 10, dby + 25);
+    g.restore();
     // top rule and label
     drawSpacedText(g, 'TACTICAL PAUSE', W / 2, y + 29, 4, `700 9px ${FONT_MONO}`, 'rgba(255,160,103,.63)', 'center');
     g.save();
@@ -12559,13 +13118,14 @@
     // stats
     const statY = y + 208;
     const cols = [
-      { x: W / 2 - 150, label: '作战用时', value: formatTime(game.stageRunTime) },
-      { x: W / 2, label: '清场奖励', value: '+' + pad(game.stageClearBonus, 4) },
-      { x: W / 2 + 150, label: '当前总战功', value: pad(game.score, 7) }
+      { x: W / 2 - 225, label: '作战用时', value: formatTime(game.stageRunTime) },
+      { x: W / 2 - 75, label: '关卡基础分', value: '+' + pad(game.stageClearBase, 4) },
+      { x: W / 2 + 75, label: '装甲得分', value: '+' + pad(game.stageClearArmor, 4), color: '#7ce7c5' },
+      { x: W / 2 + 225, label: '当前总战功', value: pad(game.score, 7) }
     ];
     for(const c of cols){
-      drawSpacedText(g, c.label, c.x, statY, 1.5, `500 8px ${FONT_CN}`, 'rgba(215,205,187,.4)', 'center');
-      drawText(g, c.value, c.x, statY + 24, `700 18px ${FONT_MONO}`, '#eadbc2', 'center');
+      drawSpacedText(g, c.label, c.x, statY, 1.2, `500 8px ${FONT_CN}`, 'rgba(215,205,187,.4)', 'center');
+      drawText(g, c.value, c.x, statY + 24, `700 18px ${FONT_MONO}`, c.color || '#eadbc2', 'center');
     }
     // bonus strip
     g.fillStyle = 'rgba(48,86,73,.22)';
@@ -12596,6 +13156,158 @@
     g.fillRect(x + 54, y + h - 19, w - 108, 2);
     g.fillStyle = 'rgba(112,230,190,.6)';
     g.fillRect(x + 54, y + h - 19, (w - 108) * progress, 2);
+    g.restore();
+  }
+
+  function drawTop15Overlay(game){
+    const g = ctx;
+    g.save();
+    g.fillStyle = 'rgba(2,6,7,.92)';
+    g.fillRect(0, 0, W, H);
+    const halo = g.createRadialGradient(W / 2, H * .42, 50, W / 2, H * .5, 520);
+    halo.addColorStop(0, 'rgba(59,74,52,.19)');
+    halo.addColorStop(1, 'rgba(1,4,5,.15)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, W, H);
+
+    const x = 78, y = 22, w = 804, h = 496;
+    drawHudFrame(g, x, y, w, h, 16, .9, 'rgba(255,181,107,.58)');
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    drawSpacedText(g, 'LOCAL ARCHIVE // 本机最高记录', W / 2, y + 39, 3.2, `700 9px ${FONT_MONO}`, 'rgba(255,196,124,.58)', 'center');
+    g.font = `900 30px ${FONT_CN}`;
+    g.fillStyle = '#f2e1c7';
+    g.fillText('TOP 15', W / 2, y + 77);
+    g.font = `500 8px ${FONT_CN}`;
+    g.fillStyle = 'rgba(220,209,188,.46)';
+    g.fillText('包含通关记录与生命耗尽的阵亡记录 · 按分数从高到低', W / 2, y + 96);
+
+    const hx = x + 38;
+    const colScore = hx + 44, colRank = hx + 142, colDiff = hx + 200, colTime = hx + 330, colBoss = hx + 430;
+    g.font = `700 7px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(255,205,135,.5)';
+    g.textAlign = 'left';
+    g.fillText('#', hx, y + 124);
+    g.textAlign = 'right';
+    g.fillText('SCORE', colScore + 74, y + 124);
+    g.textAlign = 'left';
+    g.fillText('RANK', colRank, y + 124);
+    g.fillText('DIFFICULTY', colDiff, y + 124);
+    g.fillText('TIME', colTime, y + 124);
+    g.fillText('BOSS', colBoss, y + 124);
+    g.fillStyle = 'rgba(255,194,107,.2)';
+    g.fillRect(hx, y + 131, w - 76, 1);
+
+    const diffNames = Object.fromEntries(DIFFICULTIES.map(d => [d.id, d.name]));
+    for(let i = 0; i < MAX_RUN_HISTORY; i++){
+      const rec = game.runHistory[i];
+      const rowY = y + 153 + i * 20;
+      if(!rec){
+        g.font = `700 8px ${FONT_MONO}`;
+        g.fillStyle = 'rgba(220,209,188,.2)';
+        g.textAlign = 'left';
+        g.fillText(String(i + 1).padStart(2, '0'), hx, rowY);
+        g.textAlign = 'right';
+        g.fillText('-------', colScore + 74, rowY);
+        g.textAlign = 'left';
+        g.fillText('-', colRank, rowY);
+        g.fillText('-', colDiff, rowY);
+        g.fillText('--:--', colTime, rowY);
+        g.fillText('-', colBoss, rowY);
+        continue;
+      }
+      const current = rec.score === game.score && rec.time === Math.round(game.runTime);
+      const dn = rec.difficulty ? (diffNames[rec.difficulty] || rec.difficulty) : '—';
+      if(current){
+        g.fillStyle = 'rgba(255,194,107,.08)';
+        g.fillRect(hx - 8, rowY - 12, w - 60, 18);
+      }
+      g.font = `700 8.5px ${FONT_MONO}`;
+      const rankColorRow = { SSS: '#ff9268', S: '#ffd66e', A: '#7ce7c5', B: '#a9c9da', C: '#c4b39c', D: '#9f9486' }[rec.rank] || '#c4b39c';
+      g.fillStyle = current ? rankColorRow : (i < 3 ? 'rgba(242,226,201,.82)' : 'rgba(215,206,190,.58)');
+      g.textAlign = 'left';
+      g.fillText(String(i + 1).padStart(2, '0'), hx, rowY);
+      g.textAlign = 'right';
+      g.fillText(pad(rec.score, 7), colScore + 74, rowY);
+      g.textAlign = 'left';
+      g.fillText(rec.rank, colRank, rowY);
+      g.fillText(dn, colDiff, rowY);
+      g.fillText(formatTime(rec.time), colTime, rowY);
+      g.fillText(String(rec.bosses), colBoss, rowY);
+    }
+
+    g.textAlign = 'center';
+    g.font = `500 9px ${FONT_CN}`;
+    g.fillStyle = 'rgba(225,211,190,.55)';
+    g.fillText('TAB / ESC 关闭排行榜   ·   ENTER 也关闭', W / 2, y + h - 26);
+    g.font = `500 7px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(124,231,197,.32)';
+    g.fillText('IRON ASSAULT // LOCAL-ONLY LEADERBOARD', W / 2, y + h - 10);
+    g.restore();
+  }
+
+  function drawBossResultOverlay(game){
+    const g = ctx;
+    const r = game.bossResult || {
+      name: 'BOSS', en: 'TARGET DESTROYED', score: 0, time: 0, difficulty: '', kills: 0
+    };
+    const t = game.bossResultTimer;
+    const alpha = clamp(t / .3, 0, 1);
+    g.save();
+    g.globalAlpha = alpha;
+    g.fillStyle = 'rgba(2,7,7,.9)';
+    g.fillRect(0, 0, W, H);
+    const bg = g.createRadialGradient(W / 2, H * .42, 40, W / 2, H * .5, 500);
+    bg.addColorStop(0, 'rgba(64,92,63,.18)');
+    bg.addColorStop(1, 'rgba(1,5,5,.12)');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, W, H);
+
+    const x = 224, y = 100, w = 512, h = 338;
+    g.fillStyle = 'rgba(4,12,13,.97)';
+    roundRect(g, x, y, w, h, 14);
+    g.fill();
+    drawHudFrame(g, x, y, w, h, 14, .96, 'rgba(255,177,107,.7)');
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    drawSpacedText(g, 'BOSS CHALLENGE COMPLETE', W / 2, y + 32, 3, `700 8px ${FONT_MONO}`, 'rgba(255,193,122,.58)', 'center');
+    g.font = `900 38px ${FONT_CN}`;
+    g.fillStyle = '#f3e2c7';
+    g.fillText('首领战完成', W / 2, y + 82);
+    g.font = `700 9px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(222,211,190,.52)';
+    g.fillText(r.en || 'TARGET DESTROYED', W / 2, y + 103);
+    g.font = `500 11px ${FONT_CN}`;
+    g.fillStyle = 'rgba(229,218,198,.66)';
+    g.fillText(r.name, W / 2, y + 126);
+    g.fillStyle = 'rgba(255,196,112,.22)';
+    g.fillRect(x + 58, y + 142, w - 116, 1);
+
+    const stats = [
+      ['FINAL SCORE', pad(r.score, 7)],
+      ['OPERATION TIME', formatTime(r.time)],
+      ['TOTAL KILLS', String(r.kills)],
+      ['DIFFICULTY', r.difficulty || '—']
+    ];
+    for(let i = 0; i < stats.length; i++){
+      const cx = x + 76 + (i % 2) * 206;
+      const cy = y + 175 + Math.floor(i / 2) * 45;
+      drawSpacedText(g, stats[i][0], cx, cy, 1.1, `700 7px ${FONT_MONO}`, 'rgba(224,211,190,.34)', 'left');
+      drawText(g, stats[i][1], cx, cy + 20, `700 16px ${FONT_MONO}`, '#eadbc2', 'left');
+    }
+
+    g.fillStyle = 'rgba(255,192,118,.1)';
+    roundRect(g, x + 58, y + 256, w - 116, 34, 4);
+    g.fill();
+    g.font = `500 9px ${FONT_CN}`;
+    g.fillStyle = 'rgba(255,199,135,.68)';
+    g.fillText('自由选择 · Boss 战仅作小结，不计入 TOP 15 / 最高分', W / 2, y + 277);
+
+    if(t > .45){
+      g.font = `700 12px ${FONT_CN}`;
+      g.fillStyle = '#f2ddbf';
+      g.fillText('按 ENTER 返回难度选择', W / 2, y + 316);
+    }
     g.restore();
   }
 
@@ -12660,16 +13372,203 @@
       g.font = `700 13px ${FONT_CN}`;
       g.fillStyle = '#eed8bb';
       g.textAlign = 'center';
-      g.fillText('按 ENTER 重新出击', W / 2, y + 323);
+      g.fillText(game.freeStageRun || game.freeBossRun ? '按 ENTER 返回难度选择' : '按 ENTER 重新出击', W / 2, y + 323);
       g.globalAlpha = alpha;
       g.font = `500 9px ${FONT_CN}`;
       g.fillStyle = 'rgba(212,193,173,.4)';
-      g.fillText('ESC 返回标题', W / 2, y + 340);
+      g.fillText('ESC 返回标题   ·   TAB 查看 TOP 15', W / 2, y + 340);
     }
     g.restore();
   }
 
+  function drawFrostVictoryOverlay(game){
+    const g = ctx;
+    const t = game.victoryTimer;
+    const alpha = clamp(t / .6, 0, 1);
+    const rank = game.getRunRating();
+    const rankColor = { SSS: '#ff9268', S: '#ffd66e', A: '#7ce7c5', B: '#a9c9da', C: '#c4b39c', D: '#9f9486' }[rank] || '#c4b39c';
+    const isBlizzardUnlock = game.difficulty && game.difficulty.id === 'blizzard';
+    const headline = isBlizzardUnlock ? '暴雪征服' : '极寒征服';
+    const eyebrow = isBlizzardUnlock ? 'BLIZZARD CONQUERED // 霜冻解锁' : 'DEEP FREEZE CONQUERED // 极寒征服';
+    const story = isBlizzardUnlock
+      ? '暴雪止息，霜冻的门槛已经打开。下一场风暴，在更深处等你。'
+      : '暴雪止息，霜冻破碎。最后一台战争机器在极光下停止了呼吸。';
+    const couponTitle = '❄  极寒征服者 · 零食兑换券  ❄';
+    g.save();
+    g.globalAlpha = alpha;
+    g.fillStyle = 'rgba(2,7,8,.9)';
+    g.fillRect(0, 0, W, H);
+    const bg = g.createRadialGradient(W / 2, H * .38, 20, W / 2, H * .5, 600);
+    bg.addColorStop(0, 'rgba(52,100,105,.58)');
+    bg.addColorStop(.5, 'rgba(8,25,27,.94)');
+    bg.addColorStop(1, 'rgba(1,5,7,.99)');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, W, H);
+    // Celebration snow + gold confetti
+    for(let i = 0; i < 70; i++){
+      const x = (hash(i * 3.7) * W + t * (10 + hash(i + 9) * 22)) % W;
+      const y = (hash(i * 7.1) * H + t * (18 + hash(i + 21) * 30)) % H;
+      if(i % 6 === 0){
+        g.fillStyle = i % 12 === 0 ? 'rgba(255,205,118,.72)' : 'rgba(124,231,197,.55)';
+        g.fillRect(x, y, 3, 7);
+      }else{
+        g.fillStyle = 'rgba(207,250,255,.5)';
+        g.beginPath();
+        g.arc(x, y, 1.2 + hash(i) * 1.4, 0, TAU);
+        g.fill();
+      }
+    }
+
+    const x = 108, y = 18, w = 744, h = 504;
+    g.fillStyle = 'rgba(4,12,14,.96)';
+    roundRect(g, x, y, w, h, 18);
+    g.fill();
+    drawHudFrame(g, x, y, w, h, 18, .96, 'rgba(143,232,255,.82)');
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    drawSpacedText(g, eyebrow, W / 2, y + 34, 3.2, `700 8px ${FONT_MONO}`, 'rgba(143,232,255,.72)', 'center');
+    g.font = `900 48px ${FONT_CN}`;
+    g.fillStyle = 'rgba(2,9,11,.8)';
+    g.fillText(headline, W / 2 + 3, y + 92);
+    const gold = g.createLinearGradient(0, y + 45, 0, y + 100);
+    gold.addColorStop(0, '#fff6d8');
+    gold.addColorStop(.45, '#ffe29b');
+    gold.addColorStop(1, '#ffad63');
+    g.fillStyle = gold;
+    g.fillText(headline, W / 2, y + 89);
+    g.font = `700 10px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(255,197,126,.7)';
+    g.fillText(game.boss ? game.boss.en : 'THE FINAL STORM', W / 2, y + 112);
+
+    // Rank seal
+    g.save();
+    g.translate(x + w - 68, y + 62);
+    g.strokeStyle = hexToRgba(rankColor, .8);
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(0, 0, 28, 0, TAU); g.stroke();
+    g.strokeStyle = hexToRgba(rankColor, .3);
+    g.beginPath(); g.arc(0, 0, 21, 0, TAU); g.stroke();
+    g.fillStyle = rankColor;
+    g.font = `900 ${rank === 'SSS' ? 18 : 28}px ${FONT_DISPLAY}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(rank, 0, 2);
+    g.font = `700 6px ${FONT_MONO}`;
+    g.fillStyle = hexToRgba(rankColor, .7);
+    g.textBaseline = 'alphabetic';
+    g.fillText('RANK', 0, -33);
+    g.restore();
+
+    g.font = `500 10px ${FONT_CN}`;
+    g.fillStyle = 'rgba(232,244,235,.7)';
+    g.fillText(story, W / 2, y + 139);
+    g.fillStyle = 'rgba(124,231,197,.7)';
+    g.fillRect(x + 58, y + 152, w - 116, 1);
+
+    const stats = [
+      ['FINAL SCORE', pad(game.score, 7)],
+      ['OPERATION TIME', formatTime(game.runTime)],
+      ['TOTAL KILLS', String(game.kills + game.bossKills)],
+      ['MAX CHAIN', `×${game.comboBest}`],
+      ['DEATHS', String(game.deaths)],
+      ['LIVES LEFT', String(game.lives)]
+    ];
+    const sx = x + 56, sy = y + 177;
+    for(let i = 0; i < stats.length; i++){
+      const cx = sx + (i % 3) * 220;
+      const cy = sy + Math.floor(i / 3) * 38;
+      drawSpacedText(g, stats[i][0], cx, cy, 1.2, `700 7px ${FONT_MONO}`, 'rgba(225,239,230,.38)', 'left');
+      drawText(g, stats[i][1], cx, cy + 19, `700 16px ${FONT_MONO}`, '#f4ead6', 'left');
+    }
+
+    // Blizzard has an unlock panel; the snack coupon is a Frost-only easter egg.
+    const cy0 = y + 277, ch = 112;
+    if(isBlizzardUnlock){
+      g.fillStyle = 'rgba(143,232,255,.08)';
+      roundRect(g, x + 76, cy0, w - 152, ch, 6);
+      g.fill();
+      g.strokeStyle = 'rgba(143,232,255,.46)';
+      g.lineWidth = 1.2;
+      g.stroke();
+      g.textAlign = 'center';
+      g.font = `900 21px ${FONT_CN}`;
+      g.fillStyle = '#c9f7ff';
+      g.fillText('❄  霜冻难度已解锁  ❄', W / 2, cy0 + 33);
+      g.font = `700 9px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(143,232,255,.66)';
+      g.fillText('DEEP FREEZE UNLOCKED', W / 2, cy0 + 52);
+      g.font = `500 11px ${FONT_CN}`;
+      g.fillStyle = '#e9f4ee';
+      g.fillText('返回首页选择霜冻难度，挑战极限。', W / 2, cy0 + 75);
+      g.font = `500 8px ${FONT_CN}`;
+      g.fillStyle = 'rgba(218,230,220,.48)';
+      g.fillText('THE FINAL STORM AWAITS', W / 2, cy0 + 94);
+    }else if(game.frostCouponEligible){
+      g.fillStyle = 'rgba(255,198,103,.1)';
+      roundRect(g, x + 76, cy0, w - 152, ch, 6);
+      g.fill();
+      g.setLineDash([5, 4]);
+      g.strokeStyle = 'rgba(255,210,130,.55)';
+      g.lineWidth = 1.2;
+      g.stroke();
+      g.setLineDash([]);
+      g.textAlign = 'center';
+      g.font = `900 20px ${FONT_CN}`;
+      g.fillStyle = '#ffe2a0';
+      g.fillText(couponTitle, W / 2, cy0 + 32);
+      g.font = `700 9px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(255,211,140,.65)';
+      g.fillText('SNACK COUPON // ONE FREE SNACK', W / 2, cy0 + 50);
+      g.font = `500 11px ${FONT_CN}`;
+      g.fillStyle = '#f1e4ca';
+      g.fillText('凭此页面寻找开发者，领取零食一份。', W / 2, cy0 + 72);
+      g.font = `500 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(226,213,190,.5)';
+      g.fillText('（如果你认识的话！）', W / 2, cy0 + 91);
+    }else{
+      g.fillStyle = 'rgba(124,231,197,.06)';
+      roundRect(g, x + 76, cy0, w - 152, ch, 6);
+      g.fill();
+      g.strokeStyle = 'rgba(124,231,197,.22)';
+      g.lineWidth = 1;
+      g.stroke();
+      g.textAlign = 'center';
+      g.font = `900 20px ${FONT_CN}`;
+      g.fillStyle = '#c9f7ff';
+      g.fillText('❄  极寒已被征服  ❄', W / 2, cy0 + 34);
+      g.font = `700 9px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(124,231,197,.5)';
+      g.fillText('DEEP FREEZE CONQUERED', W / 2, cy0 + 54);
+      g.font = `500 10px ${FONT_CN}`;
+      g.fillStyle = 'rgba(226,238,228,.55)';
+      g.fillText('冰原重归寂静。', W / 2, cy0 + 78);
+    }
+
+    g.font = `500 9px ${FONT_CN}`;
+    g.fillStyle = 'rgba(226,213,190,.45)';
+    g.fillText('THE STORM BREAKS  //  极光之下，天光初现。', W / 2, y + 413);
+    if(t > 1.0){
+      const blink = .72 + Math.sin(t * 3.6) * .22;
+      g.globalAlpha = alpha * blink;
+      g.font = `700 13px ${FONT_CN}`;
+      g.fillStyle = '#ffe4b0';
+      g.fillText('按 ENTER 返回首页', W / 2, y + 442);
+      g.globalAlpha = alpha;
+      g.font = `500 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(225,211,190,.48)';
+      g.fillText('TAB 查看 TOP 15   ·   ESC 返回标题', W / 2, y + 462);
+    }
+    g.font = `500 7px ${FONT_MONO}`;
+    g.fillStyle = 'rgba(124,231,197,.38)';
+    g.fillText('https://bothcats.github.io/iron-assault/   ·   MADE By BothCats', W / 2, y + 484);
+    g.restore();
+  }
+
   function drawVictoryOverlay(game){
+    if(game.difficulty && (game.difficulty.id === 'frost' || (game.difficulty.id === 'blizzard' && game.frostJustUnlocked))){
+      drawFrostVictoryOverlay(game);
+      return;
+    }
     const g = ctx;
     const t = game.victoryTimer;
     const alpha = clamp(t / .7, 0, 1);
@@ -12737,6 +13636,12 @@
     g.textBaseline = 'alphabetic';
     g.fillText('RANK', 0, -32);
     g.restore();
+
+    // Difficulty identity
+    drawSpacedText(g, `DIFFICULTY // ${(game.difficulty || DIFFICULTIES[1]).name}`, x + 38, y + 30, 1.4, `700 7px ${FONT_MONO}`, (game.difficulty || DIFFICULTIES[1]).color, 'left');
+    if(game.frostJustUnlocked){
+      drawSpacedText(g, '❄ 霜冻难度已解锁 // DEEP FREEZE UNLOCKED', x + 38, y + 44, 1.2, `700 7px ${FONT_MONO}`, 'rgba(143,232,255,.78)', 'left');
+    }
 
     // Title and enemy identification
     g.textAlign = 'center';
@@ -12809,9 +13714,10 @@
     g.font = `700 7px ${FONT_MONO}`;
     g.fillStyle = 'rgba(124,231,197,.52)';
     g.textAlign = 'center';
-    const timeBonusText = game.runTime > 300
+    const runDiff = game.difficulty || DIFFICULTIES[1];
+    const timeBonusText = game.runTime > runDiff.timeLimit
       ? 'TIME BONUS +00000   //   OVERTIME · NO PENALTY'
-      : `TIME BONUS +${pad(game.timeBonus || 0, 5)}   //   REMAINING ${game.timeRemaining || 0}s   //   CAP 1200`;
+      : `TIME BONUS +${pad(game.timeBonus || 0, 5)}   //   REMAINING ${game.timeRemaining || 0}s   //   CAP ${runDiff.timeCap}`;
     g.fillText(timeBonusText, W / 2, y + 279);
 
     if(game.newRecord){
@@ -12843,11 +13749,11 @@
       g.globalAlpha = alpha * blink;
       g.font = `700 13px ${FONT_CN}`;
       g.fillStyle = '#f2dfc0';
-      g.fillText('按 ENTER 再次出击', W / 2, y + 400);
+      g.fillText('按 ENTER 返回首页', W / 2, y + 400);
       g.globalAlpha = alpha;
       g.font = `500 9px ${FONT_CN}`;
       g.fillStyle = 'rgba(223,204,177,.4)';
-      g.fillText('ESC 返回标题', W / 2, y + 420);
+      g.fillText('TAB 查看 TOP 15   ·   ESC 返回标题', W / 2, y + 420);
     }
 
     // Footer / project credit
@@ -13160,6 +14066,267 @@
     }
   }
 
+  function drawDifficultyOverlay(game, alpha = 1, exitAlpha = 0){
+    const g = ctx;
+    g.save();
+    g.globalAlpha = clamp(alpha, 0, 1);
+    g.fillStyle = 'rgba(2,7,7,.88)';
+    g.fillRect(0, 0, W, H);
+    const halo = g.createRadialGradient(W / 2, H * .42, 80, W / 2, H * .5, 560);
+    halo.addColorStop(0, 'rgba(49,89,77,.17)');
+    halo.addColorStop(.6, 'rgba(4,11,11,.14)');
+    halo.addColorStop(1, 'rgba(1,4,5,.78)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, W, H);
+
+    drawHudFrame(g, 26, 22, 908, 496, 18, .92, 'rgba(255,151,94,.62)');
+    drawSpacedText(g, 'SELECT DIFFICULTY', W / 2, 53, 4.2, `700 8px ${FONT_MONO}`, 'rgba(255,172,112,.6)', 'center');
+    g.textAlign = 'center';
+    g.textBaseline = 'alphabetic';
+    g.font = `900 30px ${FONT_CN}`;
+    g.fillStyle = '#f3e3ca';
+    g.fillText('选择作战难度', W / 2, 91);
+    g.font = `500 9px ${FONT_CN}`;
+    g.fillStyle = 'rgba(218,208,189,.46)';
+    g.fillText('不同难度会改变护盾、Boss 生命、击杀倍率与时间奖励。', W / 2, 112);
+    const available = game.getAvailableDifficulties ? game.getAvailableDifficulties() : DIFFICULTIES;
+    drawSpacedText(g, `${available.length} MODES // CHOOSE ONE`, W / 2, 129, 2.2, `700 7px ${FONT_MONO}`, 'rgba(124,231,197,.42)', 'center');
+
+    // Horizontal selector: one row, no long rule columns.
+    const btnW = available.length >= 4 ? 164 : 206;
+    const btnH = 86, gap = 14;
+    const startX = (W - (btnW * available.length + gap * (available.length - 1))) / 2;
+    const rowY = 154;
+    for(let i = 0; i < available.length; i++){
+      const d = available[i];
+      const x = startX + i * (btnW + gap);
+      const selected = game.difficulty && d.id === game.difficulty.id;
+      g.save();
+      if(selected){
+        g.shadowColor = d.color;
+        g.shadowBlur = 20;
+      }
+      roundRect(g, x, rowY, btnW, btnH, 7);
+      g.fillStyle = selected ? 'rgba(20,38,33,.98)' : 'rgba(8,15,14,.9)';
+      g.fill();
+      g.strokeStyle = selected ? d.color : 'rgba(104,130,119,.25)';
+      g.lineWidth = selected ? 2 : 1;
+      g.stroke();
+      g.restore();
+
+      g.fillStyle = selected ? d.color : 'rgba(111,138,126,.25)';
+      g.fillRect(x + 1, rowY + 1, btnW - 2, 2);
+      g.textAlign = 'left';
+      g.font = `700 7px ${FONT_MONO}`;
+      g.fillStyle = selected ? 'rgba(255,216,166,.6)' : 'rgba(196,191,173,.28)';
+      g.fillText(`0${i + 1}`, x + 12, rowY + 18);
+      g.font = `900 20px ${FONT_CN}`;
+      g.fillStyle = selected ? '#f6e5cb' : 'rgba(222,211,191,.58)';
+      g.fillText(d.name, x + 12, rowY + 46);
+      g.font = `700 6.5px ${FONT_MONO}`;
+      g.fillStyle = selected ? d.color : 'rgba(176,171,154,.4)';
+      g.fillText(d.en, x + 12, rowY + 61);
+      g.font = `700 6.5px ${FONT_MONO}`;
+      if(d.id === 'normal'){
+        g.fillStyle = selected ? '#ffd37a' : 'rgba(255,211,122,.36)';
+        g.fillText('DEFAULT', x + 12, rowY + 78);
+      }else if(d.id === 'frost' && game.frostCleared){
+        g.fillStyle = selected ? '#8fe8ff' : 'rgba(143,232,255,.44)';
+        g.fillText('CLEARED', x + 12, rowY + 78);
+      }
+      if(selected){
+        g.fillStyle = d.color;
+        g.beginPath();
+        g.moveTo(x + btnW / 2 - 7, rowY + btnH + 1);
+        g.lineTo(x + btnW / 2 + 7, rowY + btnH + 1);
+        g.lineTo(x + btnW / 2, rowY + btnH + 8);
+        g.closePath();
+        g.fill();
+      }
+    }
+
+    const selected = game.difficulty || available[Math.min(1, available.length - 1)];
+    g.textAlign = 'left';
+    g.textBaseline = 'alphabetic';
+
+    if(game.frostUnlocked){
+      // One centered console, split into the image selector and the difficulty readout.
+      const panelW = 700, panelH = 174, panelY = 256;
+      const panelX = (W - panelW) / 2;
+      const gx = panelX + 20, boxTop = 288, rowStep = 23;
+      const bw2 = 112, bh2 = 20, col2 = gx + bw2 + 8;
+      const dividerX = panelX + 280;
+      const infoW = 376, rx = panelX + 304;
+
+      g.save();
+      const plate = g.createLinearGradient(0, panelY, 0, panelY + panelH);
+      plate.addColorStop(0, 'rgba(27,42,35,.72)');
+      plate.addColorStop(.45, 'rgba(9,18,17,.64)');
+      plate.addColorStop(1, 'rgba(4,10,11,.5)');
+      g.fillStyle = plate;
+      roundRect(g, panelX, panelY, panelW, panelH, 8);
+      g.fill();
+      g.strokeStyle = 'rgba(255,185,112,.16)';
+      g.lineWidth = 1;
+      g.stroke();
+      const topGlow = g.createLinearGradient(0, panelY, 0, panelY + 46);
+      topGlow.addColorStop(0, 'rgba(255,187,111,.11)');
+      topGlow.addColorStop(1, 'rgba(255,187,111,0)');
+      g.fillStyle = topGlow;
+      g.fillRect(panelX + 1, panelY + 1, panelW - 2, 46);
+      g.fillStyle = 'rgba(255,255,255,.018)';
+      for(let yy = panelY + 8; yy < panelY + panelH - 5; yy += 7) g.fillRect(panelX + 8, yy, panelW - 16, 1);
+      // Divider between the two sections.
+      g.fillStyle = 'rgba(255,190,120,.12)';
+      g.fillRect(dividerX, panelY + 16, 1, panelH - 30);
+      g.strokeStyle = 'rgba(255,190,120,.45)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(panelX + 1, panelY + 10); g.lineTo(panelX + 1, panelY + 1); g.lineTo(panelX + 12, panelY + 1);
+      g.moveTo(panelX + panelW - 12, panelY + 1); g.lineTo(panelX + panelW - 1, panelY + 1); g.lineTo(panelX + panelW - 1, panelY + 10);
+      g.stroke();
+      g.restore();
+
+      const gridCenter = (gx + col2 + bw2) / 2;
+      drawSpacedText(g, 'FREE SELECT // 自由选择', gridCenter, 264, 1.5, `700 7px ${FONT_MONO}`, 'rgba(255,212,151,.9)', 'center');
+      g.font = `700 7px ${FONT_CN}`;
+      g.fillStyle = 'rgba(255,210,155,.82)';
+      g.textAlign = 'center';
+      g.fillText('关卡', gx + bw2 / 2, 280);
+      g.fillText('Boss', col2 + bw2 / 2, 280);
+      g.textAlign = 'left';
+      // Difficulty color tick above the readout.
+      g.fillStyle = selected.color;
+      g.globalAlpha = .62;
+      g.fillRect(rx, 281, 26, 2);
+      g.globalAlpha = 1;
+
+      const drawBox = (src, xx, yy, isCursor) => {
+        // Soft lift; the selected card gets a warm halo.
+        g.save();
+        g.shadowColor = isCursor ? 'rgba(255,145,78,.55)' : 'rgba(0,0,0,.55)';
+        g.shadowBlur = isCursor ? 8 : 3;
+        g.shadowOffsetY = isCursor ? 1 : 2;
+        g.fillStyle = 'rgba(10,19,18,.95)';
+        roundRect(g, xx, yy, bw2, bh2, 3);
+        g.fill();
+        g.restore();
+
+        g.save();
+        roundRect(g, xx, yy, bw2, bh2, 3);
+        g.clip();
+        const img = freeThumb(src);
+        if(img){
+          g.drawImage(img, xx, yy, bw2, bh2);
+        }else{
+          g.fillStyle = 'rgba(18,32,28,.9)';
+          g.fillRect(xx, yy, bw2, bh2);
+        }
+        g.fillStyle = isCursor ? 'rgba(2,8,9,.06)' : 'rgba(2,8,9,.16)';
+        g.fillRect(xx, yy, bw2, bh2);
+        const sheen = g.createLinearGradient(0, yy, 0, yy + bh2);
+        sheen.addColorStop(0, isCursor ? 'rgba(255,217,160,.14)' : 'rgba(255,255,255,.05)');
+        sheen.addColorStop(1, 'rgba(0,0,0,.08)');
+        g.fillStyle = sheen;
+        g.fillRect(xx, yy, bw2, bh2);
+        g.restore();
+
+        g.strokeStyle = isCursor ? '#ffb06d' : 'rgba(142,158,139,.32)';
+        g.lineWidth = isCursor ? 1.7 : 1;
+        roundRect(g, xx, yy, bw2, bh2, 3);
+        g.stroke();
+        if(isCursor){
+          // Four corner brackets follow the new cursor.
+          const bl = 4;
+          g.strokeStyle = '#ffd09a';
+          g.lineWidth = 1.4;
+          g.beginPath();
+          g.moveTo(xx - 2, yy - 2 + bl); g.lineTo(xx - 2, yy - 2); g.lineTo(xx - 2 + bl, yy - 2);
+          g.moveTo(xx + bw2 + 2 - bl, yy - 2); g.lineTo(xx + bw2 + 2, yy - 2); g.lineTo(xx + bw2 + 2, yy - 2 + bl);
+          g.moveTo(xx - 2, yy + bh2 + 2 - bl); g.lineTo(xx - 2, yy + bh2 + 2); g.lineTo(xx - 2 + bl, yy + bh2 + 2);
+          g.moveTo(xx + bw2 + 2 - bl, yy + bh2 + 2); g.lineTo(xx + bw2 + 2, yy + bh2 + 2); g.lineTo(xx + bw2 + 2, yy + bh2 + 2 - bl);
+          g.stroke();
+        }
+      };
+
+      for(let i = 0; i < 6; i++){
+        const yy = boxTop + i * rowStep;
+        drawBox(
+          FREE_STAGE_IMG[i], gx, yy,
+          game.selectionMode === 'grid' && game.freeCursorRow === i && game.freeCursorCol === 0
+        );
+        if(i > 0){
+          drawBox(
+            FREE_BOSS_IMG[i - 1], col2, yy,
+            game.selectionMode === 'grid' && game.freeCursorRow === i && game.freeCursorCol === 1
+          );
+        }
+      }
+
+      g.font = `900 24px ${FONT_CN}`;
+      g.fillStyle = selected.color;
+      g.fillText(selected.name, rx, 306);
+      g.font = `700 7px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(210,206,189,.44)';
+      g.fillText(selected.en, rx, 323);
+      g.font = `500 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(224,214,197,.56)';
+      g.fillText(selected.tagline, rx, 343);
+
+      g.fillStyle = 'rgba(255,201,124,.16)';
+      g.fillRect(rx, 355, infoW, 1);
+      drawSpacedText(g, 'DIFFICULTY NOTE // 难度提示', rx, 373, 1.8, `700 7px ${FONT_MONO}`, 'rgba(124,231,197,.58)', 'left');
+      g.font = `500 10px ${FONT_CN}`;
+      g.fillStyle = '#efe2ca';
+      g.fillText(selected.hint, rx, 395);
+
+      g.textAlign = 'center';
+      g.font = `700 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(238,218,188,.72)';
+      g.fillText(game.selectionMode === 'grid'
+        ? 'W/S 上下选择   ·   A/D 左右选择   ·   ENTER 开始   ·   顶部 W 返回难度'
+        : 'A / D 选择难度   ·   S 进入自由选择   ·   ENTER 直接开始',
+        W / 2, 448);
+      drawSpacedText(g, 'BACKSPACE  RETURN HOME', W / 2, 468, 1.2, `700 6.5px ${FONT_MONO}`, 'rgba(255,204,148,.42)', 'center');
+    }else{
+      g.textAlign = 'center';
+      g.font = `900 26px ${FONT_CN}`;
+      g.fillStyle = selected.color;
+      g.fillText(selected.name, W / 2, rowY + btnH + 48);
+      g.font = `700 7px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(210,206,189,.46)';
+      g.fillText(selected.en, W / 2, rowY + btnH + 65);
+      g.font = `500 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(224,214,197,.56)';
+      g.fillText(selected.tagline, W / 2, rowY + btnH + 84);
+
+      g.fillStyle = 'rgba(255,201,124,.18)';
+      g.fillRect(150, 352, W - 300, 1);
+      drawSpacedText(g, 'DIFFICULTY NOTE // 难度提示', W / 2, 371, 2, `700 7px ${FONT_MONO}`, 'rgba(124,231,197,.6)', 'center');
+      g.font = `500 11px ${FONT_CN}`;
+      g.fillStyle = '#efe2ca';
+      g.fillText(selected.hint, W / 2, 397);
+
+      g.font = `700 9px ${FONT_CN}`;
+      g.fillStyle = 'rgba(238,218,188,.72)';
+      g.fillText('A / D 选择难度   ·   ENTER 确认   ·   BACKSPACE  RETURN HOME', W / 2, 448);
+      g.font = `500 8px ${FONT_CN}`;
+      g.fillStyle = 'rgba(164,190,174,.42)';
+      g.fillText('高难度会改变护盾上限、Boss 生命、死亡掉落与时间奖励。', W / 2, 470);
+      g.font = `500 7px ${FONT_MONO}`;
+      g.fillStyle = 'rgba(124,231,197,.3)';
+      g.fillText(available.length < 4
+        ? 'DEEP FREEZE LOCKED  //  CLEAR BLIZZARD TO UNLOCK'
+        : 'DEEP FREEZE UNLOCKED  //  SURVIVE THE FINAL STORM', W / 2, 492);
+    }
+    g.restore();
+
+    if(exitAlpha > 0){
+      g.fillStyle = `rgba(2,5,6,${clamp(exitAlpha, 0, 1)})`;
+      g.fillRect(0, 0, W, H);
+    }
+  }
+
   /* =========================================================
      RENDER / LOOP / BOOT
      ========================================================= */
@@ -13170,10 +14337,23 @@
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
     ctx.clearRect(0, 0, W, H);
-    if(this.state === 'title'){
+    if(this.state === 'title' || this.state === 'difficulty'){
       renderTitle(this);
+      if(this.state === 'difficulty'){
+        const enter = 1 - Math.pow(1 - clamp(this.difficultyEnter, 0, 1), 3);
+        drawDifficultyOverlay(
+          this,
+          this.difficultyExiting ? 1 : enter,
+          this.difficultyExiting ? this.difficultyExit : 0
+        );
+      }
     }else{
       drawGameScene(this);
+      if(this.state === 'bossresult'){
+        drawBossResultOverlay(this);
+      }else if((this.state === 'victory' || this.state === 'gameover') && this.victoryShowLeaderboard){
+        drawTop15Overlay(this);
+      }
     }
   };
 
@@ -13183,6 +14363,13 @@
   // Optional debug entry: ?autostart=1&stage=1|2&x=... (also useful for automated capture)
   try{
     const params = new URLSearchParams(window.location.search);
+    if(params.has('difficulty')){
+      const di = DIFFICULTIES.findIndex(d => d.id === params.get('difficulty'));
+      if(di >= 0){
+        game.difficultyIndex = di;
+        game.difficulty = DIFFICULTIES[di];
+      }
+    }
     if(params.has('autostart')){
       game.startNewRun();
       const stageParam = Number(params.get('stage'));
