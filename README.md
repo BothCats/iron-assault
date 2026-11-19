@@ -1,5 +1,7 @@
 ### 🎮 IRON ASSAULT / 钢铁突击
 
+[👉 点击这里开始游戏](https://bothcats.github.io/iron-assault/)
+
 > **六大战区 · 钢铁洪流 · 深入敌后**
 
 一款使用 **HTML5 Canvas + Web Audio API** 制作的单文件横版跑射游戏。
@@ -32,17 +34,14 @@
 
 本项目为纯静态页面，无需构建工具。
 
-1. 克隆仓库：
+★ 克隆仓库：
 
    ```bash
    git clone git@github.com:BothCats/iron-assault.git
    ```
 
-2. 直接在浏览器打开 `index.html`。
+#### 🌐 在线访问 直接在浏览器打开 `index.html`。
 
-#### 🌐 在线访问
-
-[👉 点击这里开始游戏](https://bothcats.github.io/iron-assault/)
 
 #### 🎮 操作
 
